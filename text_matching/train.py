@@ -46,15 +46,15 @@ length = 100
 
 
 def read_data():
-    df_train = pd.read_csv('../data/text_matching/train.csv', header=None).values[1:]
-    df_eval = pd.read_csv('../data/text_matching/eval.csv', header=None).values[1:]
-    df_test = pd.read_csv('../data/text_matching/test.csv', header=None).values[1:]
+    df_train = pd.read_csv('../data/text_matching/train.csv').values
+    df_eval = pd.read_csv('../data/text_matching/dev.csv').values[:10000]
+    df_test = pd.read_csv('../data/text_matching/test.csv').values
 
-    df_train = shuffle(df_train)
-    df_eval = shuffle(df_eval)
-    df_test = shuffle(df_test)
+    # df_train = shuffle(df_train)
+    # df_eval = shuffle(df_eval)
+    # df_test = shuffle(df_test)
 
-    return df_train[0:length][0], df_eval[0:length][0], df_test[0:length][0]
+    return df_train, df_eval, df_test
 
 
 def list_find(list1, list2):
@@ -98,10 +98,10 @@ def extract_entity(text1, text2, model):
     _x1, _x2 = tokenizer.encode(first=text1, second=text2)
     _x1, _x2 = np.array([_x1]), np.array([_x2])
     with graph.as_default():
-        _ps1 = model.predict([_x1, _x2])
-        start = _ps1.argmax()
+        prob = model.predict([_x1, _x2])
+        res = prob.argmax()
 
-    return start
+    return res, prob
 
 
 class Evaluate(Callback):
@@ -116,36 +116,36 @@ class Evaluate(Callback):
         self.ACC.append(acc)
         if acc > self.best:
             self.best = acc
-            self.model.save_weights('../output/sentiment_model.weights')
+            self.model.save_weights('../matching_model.weights')
         print('acc: %.4f, best acc: %.4f\n' % (acc, self.best))
 
     def evaluate(self):
         A = 1e-10
         for d in tqdm(iter(self.dev_data)):
-            R = extract_entity(d[0], d[1], self.model)
-            if R == d[2]:
+            res, prob = extract_entity(d[0], d[1], self.model)
+            if res == d[2]:
                 A += 1
         return A / len(self.dev_data)
 
 
-# def test(test_data, model):
-#     """注意官方页面写着是以\t分割，实际上却是以逗号分割
-#     """
-#     with open('../result.txt', 'w', encoding='utf-8')as file:
-#         for d in tqdm(iter(test_data)):
-#             s = str(d[0]) + ',' + extract_entity(d[1].replace('\t', ''), model)
-#             file.write(s + '\n')
+def test(test_data, model):
+    """注意官方页面写着是以\t分割，实际上却是以逗号分割
+    """
+    with open('../result.txt', 'w', encoding='utf-8')as file:
+        for d in tqdm(iter(test_data)):
+            s = str(d[0]) + ',' + extract_entity(d[1].replace('\t', ''), model)
+            file.write(s + '\n')
 
 
 if __name__ == '__main__':
-    batch_size = 256
+    batch_size = 200
     learning_rate = 1e-5
 
     train_data, dev_data, test_data = read_data()
 
     model = model(learning_rate=learning_rate)
 
-    # model.load_weights('../output/best_model2.weights')
+    model.load_weights('../matching_model.weights')
 
     evaluator = Evaluate(dev_data, model)
 

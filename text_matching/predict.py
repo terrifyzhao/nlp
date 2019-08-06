@@ -3,28 +3,21 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 
-from sentiment.sentiment_model import sentiment_model
-from sentiment.sentiment_train import extract_entity
+from text_matching.model import model
+from text_matching.train import extract_entity
 
-model = sentiment_model()
-model.load_weights('../output/sentiment_model.weights')
+model = model()
+model.load_weights('../matching_model.weights')
 
 
-def predict(content):
-    res, prob = extract_entity(content, model)
-    if int(res) == 0:
-        return '中性', prob
-    elif int(res) == 1:
-        return '正面', prob
-    elif int(res) == 2:
-        return '负面', prob
-    elif int(res) == 3:
-        return '未提及', prob
-    return '其它', prob
+def predict(text1, text2):
+    res, prob = extract_entity(text1, text2, model)
+    return res, prob
 
 
 if __name__ == '__main__':
     while 1:
-        content = input('content:')
-        r, prob = predict(content)
+        text1 = input('content:')
+        text2 = input('content:')
+        r, prob = predict(text1, text2)
         print(r, '----', str(prob))
